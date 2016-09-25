@@ -12,7 +12,7 @@ func TestTupleSimple(t *testing.T) {
 	session := createSession(t)
 	defer session.Close()
 
-	err := createTable(session, `CREATE TABLE tuple_test(
+	err := createTable(session, `CREATE TABLE gocql_test.tuple_test(
 		id int,
 		coord frozen<tuple<int, int>>,
 
@@ -47,5 +47,33 @@ func TestTupleSimple(t *testing.T) {
 	}
 	if coord.y != -100 {
 		t.Errorf("expected to get coord.y=-100 got: %v", coord.y)
+	}
+}
+
+func TestTupleMapScan(t *testing.T) {
+	if *flagProto < protoVersion3 {
+		t.Skip("tuple types are only available of proto>=3")
+	}
+
+	session := createSession(t)
+	defer session.Close()
+
+	err := createTable(session, `CREATE TABLE gocql_test.tuple_map_scan(
+		id int,
+		val frozen<tuple<int, int>>,
+
+		primary key(id))`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := session.Query(`INSERT INTO tuple_map_scan (id, val) VALUES (1, (1, 2));`).Exec(); err != nil {
+		t.Fatal(err)
+	}
+
+	m := make(map[string]interface{})
+	err = session.Query(`SELECT * FROM tuple_map_scan`).MapScan(m)
+	if err != nil {
+		t.Fatal(err)
 	}
 }
